@@ -1,0 +1,10 @@
+{
+  "description": "Offers a sleek, luxurious e-commerce platform for jewelry shoppers delivering a seamless and high-performance user experience.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
