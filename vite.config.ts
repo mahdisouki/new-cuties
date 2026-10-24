@@ -1,15 +1,21 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
 import siteConfiguration from './.figma/make/site.json'
+import { seoFiles } from './seo'
 
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const fileEnv = loadEnv(mode, process.cwd(), 'VITE_')
+  const env = {
+    VITE_API_URL: process.env.VITE_API_URL !== undefined ? process.env.VITE_API_URL : fileEnv.VITE_API_URL,
+    VITE_SITE_URL: process.env.VITE_SITE_URL !== undefined ? process.env.VITE_SITE_URL : fileEnv.VITE_SITE_URL,
+  }
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
@@ -21,6 +27,7 @@ export default defineConfig(({ mode }) => {
 react(),
       tailwindcss(),
       figmaSiteConfiguration(siteConfiguration),
+      cutiesSeo(env),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
@@ -46,6 +53,31 @@ react(),
     },
   }
 })
+
+function cutiesSeo(env: { VITE_API_URL: string | undefined; VITE_SITE_URL: string | undefined }): Plugin {
+  return {
+    name: 'cuties-seo',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = req.url?.split('?')[0]
+        if (pathname !== '/robots.txt' && pathname !== '/sitemap.xml') return next()
+        try {
+          const files = await seoFiles(env)
+          const body = pathname === '/robots.txt' ? files.robots : files.sitemap
+          res.setHeader('Content-Type', pathname === '/robots.txt' ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8')
+          res.end(body)
+        } catch (error) {
+          next(error as Error)
+        }
+      })
+    },
+    async generateBundle() {
+      const files = await seoFiles(env)
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: files.robots })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: files.sitemap })
+    },
+  }
+}
 
 type FigmaSiteConfiguration = {
   title?: string
