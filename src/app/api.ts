@@ -30,3 +30,16 @@ export async function request<T>(path: string, options?: { method?: string; body
   if (!response.ok) throw new ApiError(data.error ?? "Request failed", response.status);
   return data as T;
 }
+
+export async function uploadFile<T>(path: string, file: File, token: string) {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(`${apiUrl()}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  });
+  const data = (await response.json()) as { error?: string };
+  if (!response.ok) throw new ApiError(data.error ?? "Upload failed", response.status);
+  return data as T;
+}

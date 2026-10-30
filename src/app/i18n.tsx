@@ -74,8 +74,10 @@ type Copy = {
   product: {
     materials: string;
     size: string;
+    color: string;
     added: string;
     add: string;
+    outOfStock: string;
     assurances: string[];
     related: string;
   };
@@ -182,8 +184,10 @@ const en: Copy = {
   product: {
     materials: "Materials",
     size: "Select size",
+    color: "Color",
     added: "Added",
     add: "Add to bag",
+    outOfStock: "Out of stock",
     assurances: [
       "Delivery 7 DT, cash on delivery",
       "30-day returns & exchanges",
@@ -302,8 +306,10 @@ const fr: Copy = {
   product: {
     materials: "Matières",
     size: "Choisir la taille",
+    color: "Couleur",
     added: "Ajouté",
     add: "Ajouter au sac",
+    outOfStock: "Rupture de stock",
     assurances: [
       "Livraison 7 DT, paiement à la livraison",
       "Retours et échanges sous 30 jours",
@@ -422,8 +428,10 @@ const ar: Copy = {
   product: {
     materials: "المواد",
     size: "اختر المقاس",
+    color: "اللون",
     added: "تمت الإضافة",
     add: "أضف إلى الحقيبة",
+    outOfStock: "غير متوفر",
     assurances: [
       "التوصيل 7 د.ت، والدفع عند الاستلام",
       "إرجاع واستبدال خلال 30 يوماً",

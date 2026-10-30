@@ -7,15 +7,17 @@ import {
   useState,
 } from "react";
 import { useCatalog } from "./catalog";
-import { type Product } from "./data";
+import { type Product, type ProductVariant } from "./data";
 
 export type CartItem = {
   product: Product;
+  variant: ProductVariant;
   quantity: number;
 };
 
 type CartLine = {
-  id: string;
+  productId: string;
+  variantId: string;
   quantity: number;
 };
 
@@ -24,29 +26,50 @@ type ShopContextValue = {
   unresolvedIds: string[];
   cartCount: number;
   subtotal: number;
-  addToCart: (id: string, quantity?: number) => void;
-  removeFromCart: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  addToCart: (productId: string, variantId: string, quantity?: number) => void;
+  removeFromCart: (productId: string, variantId: string) => void;
+  updateQuantity: (productId: string, variantId: string, quantity: number) => void;
   clearCart: () => void;
 };
 
 const ShopContext = createContext<ShopContextValue | null>(null);
+const CART_KEY = "cuties-cart-v2";
 
 function readLines(): CartLine[] {
-  const stored = window.localStorage.getItem("cuties-cart");
+  const stored = window.localStorage.getItem(CART_KEY);
   if (!stored) return [];
   const parsed: unknown = JSON.parse(stored);
   if (!Array.isArray(parsed)) throw new Error("Cart data is invalid");
   return parsed.map((item) => {
-    if (typeof item !== "object" || item === null || !("id" in item) || !("quantity" in item)) {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      !("productId" in item) ||
+      !("variantId" in item) ||
+      !("quantity" in item)
+    ) {
       throw new Error("Cart data is invalid");
     }
-    const record = item as { id: unknown; quantity: unknown };
-    if (typeof record.id !== "string" || typeof record.quantity !== "number" || record.quantity < 1) {
+    const record = item as { productId: unknown; variantId: unknown; quantity: unknown };
+    if (
+      typeof record.productId !== "string" ||
+      typeof record.variantId !== "string" ||
+      typeof record.quantity !== "number" ||
+      record.quantity < 1
+    ) {
       throw new Error("Cart data is invalid");
     }
-    return { id: record.id, quantity: record.quantity };
+    return { productId: record.productId, variantId: record.variantId, quantity: record.quantity };
   });
+}
+
+function clampToStock(requested: number, stock: number) {
+  if (stock < 1) return 0;
+  return Math.min(requested, stock);
+}
+
+function lineKey(productId: string, variantId: string) {
+  return `${productId}::${variantId}`;
 }
 
 export function ShopProvider({ children }: { children: ReactNode }) {
@@ -54,26 +77,62 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>(readLines);
 
   useEffect(() => {
-    window.localStorage.setItem("cuties-cart", JSON.stringify(lines));
+    window.localStorage.setItem(CART_KEY, JSON.stringify(lines));
   }, [lines]);
+
+  useEffect(() => {
+    if (!products) return;
+    setLines((items) =>
+      items.flatMap((item) => {
+        const product = products.find((entry) => entry.id === item.productId);
+        if (!product) return [item];
+        const variant = product.variants.find((entry) => entry.id === item.variantId);
+        if (!variant) return [];
+        const quantity = clampToStock(item.quantity, variant.quantity);
+        if (quantity < 1) return [];
+        if (quantity === item.quantity) return [item];
+        return [{ ...item, quantity }];
+      }),
+    );
+  }, [products]);
 
   const value = useMemo<ShopContextValue>(() => {
     const unresolvedIds = products
-      ? lines.filter((line) => !products.some((product) => product.id === line.id)).map((line) => line.id)
+      ? lines
+          .filter((line) => {
+            const product = products.find((entry) => entry.id === line.productId);
+            if (!product) return true;
+            return !product.variants.some((variant) => variant.id === line.variantId);
+          })
+          .map((line) => lineKey(line.productId, line.variantId))
       : [];
+
     const cart = products
       ? lines.flatMap((line) => {
-          const product = products.find((item) => item.id === line.id);
-          return product ? [{ product, quantity: line.quantity }] : [];
+          const product = products.find((item) => item.id === line.productId);
+          const variant = product?.variants.find((item) => item.id === line.variantId);
+          return product && variant ? [{ product, variant, quantity: line.quantity }] : [];
         })
       : [];
 
-    const updateQuantity = (id: string, quantity: number) => {
+    const updateQuantity = (productId: string, variantId: string, quantity: number) => {
       if (quantity < 1) {
-        setLines((items) => items.filter((item) => item.id !== id));
+        setLines((items) => items.filter((item) => !(item.productId === productId && item.variantId === variantId)));
         return;
       }
-      setLines((items) => items.map((item) => (item.id === id ? { ...item, quantity } : item)));
+      const product = products?.find((entry) => entry.id === productId);
+      const variant = product?.variants.find((entry) => entry.id === variantId);
+      if (!product || !variant) throw new Error(`Unknown product ${productId}/${variantId}`);
+      const next = clampToStock(quantity, variant.quantity);
+      if (next < 1) {
+        setLines((items) => items.filter((item) => !(item.productId === productId && item.variantId === variantId)));
+        return;
+      }
+      setLines((items) =>
+        items.map((item) =>
+          item.productId === productId && item.variantId === variantId ? { ...item, quantity: next } : item,
+        ),
+      );
     };
 
     return {
@@ -81,16 +140,26 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       unresolvedIds,
       cartCount: lines.reduce((sum, item) => sum + item.quantity, 0),
       subtotal: cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-      addToCart: (id, quantity = 1) => {
-        if (!products?.some((product) => product.id === id)) throw new Error(`Unknown product ${id}`);
+      addToCart: (productId, variantId, quantity = 1) => {
+        const product = products?.find((entry) => entry.id === productId);
+        const variant = product?.variants.find((entry) => entry.id === variantId);
+        if (!product || !variant) throw new Error(`Unknown product ${productId}/${variantId}`);
+        if (variant.quantity < 1) throw new Error(`Out of stock: ${productId}/${variantId}`);
         setLines((items) => {
-          const current = items.find((item) => item.id === id);
-          return current
-            ? items.map((item) => (item.id === id ? { ...item, quantity: item.quantity + quantity } : item))
-            : [...items, { id, quantity }];
+          const current = items.find((item) => item.productId === productId && item.variantId === variantId);
+          if (current) {
+            const next = clampToStock(current.quantity + quantity, variant.quantity);
+            return items.map((item) =>
+              item.productId === productId && item.variantId === variantId ? { ...item, quantity: next } : item,
+            );
+          }
+          const next = clampToStock(quantity, variant.quantity);
+          if (next < 1) return items;
+          return [...items, { productId, variantId, quantity: next }];
         });
       },
-      removeFromCart: (id) => setLines((items) => items.filter((item) => item.id !== id)),
+      removeFromCart: (productId, variantId) =>
+        setLines((items) => items.filter((item) => !(item.productId === productId && item.variantId === variantId))),
       updateQuantity,
       clearCart: () => setLines([]),
     };

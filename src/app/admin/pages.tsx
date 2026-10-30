@@ -3,6 +3,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useParams } 
 import { formatPrice } from "../i18n";
 import {
   adminApi,
+  adminUpload,
   AdminApiError,
   type AdminOrder,
   type AdminProduct,
@@ -149,10 +150,10 @@ export function AdminProductsPage() {
         <div className="mt-10 divide-y divide-[#ddd8ce] border-y border-[#ddd8ce]">
           {products.map((product) => (
             <article className="grid grid-cols-[72px_1fr_auto] items-center gap-5 py-4" key={product.id}>
-              <img alt="" className="size-[72px] object-cover" src={product.image} />
+              <img alt="" className="size-[72px] object-cover" src={product.variants[0]?.image ?? product.image} />
               <div>
                 <p className="font-serif text-2xl">{product.translations.en.name}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#7d786f]">{product.category} · {formatPrice(product.price, "en")}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#7d786f]">{product.category} · {formatPrice(product.price, "en")} · {product.variants.length} colors · Stock {product.quantity}</p>
               </div>
               <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.16em]">
                 <Link to={`/admin/products/${product.id}`}>Edit</Link>
@@ -168,25 +169,38 @@ export function AdminProductsPage() {
 
 type TranslationFields = { name: string; material: string; description: string; label: string };
 
+type VariantFields = { id: string; color: string; image: string; quantity: string };
+
 type ProductForm = {
   slug: string;
   category: Category;
   price: string;
-  image: string;
   position: string;
+  variants: VariantFields[];
   translations: Record<(typeof locales)[number], TranslationFields>;
 };
 
 const emptyTranslation = (): TranslationFields => ({ name: "", material: "", description: "", label: "" });
 
+const emptyVariant = (): VariantFields => ({ id: "", color: "", image: "", quantity: "10" });
+
 const emptyForm = (): ProductForm => ({
   slug: "",
   category: "Rings",
   price: "",
-  image: "",
   position: "0",
+  variants: [emptyVariant()],
   translations: { en: emptyTranslation(), fr: emptyTranslation(), ar: emptyTranslation() },
 });
+
+function slugifyColor(color: string) {
+  const slug = color
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "color";
+}
 
 function fromProduct(product: AdminProduct): ProductForm {
   const text = (value: AdminTranslation): TranslationFields => ({
@@ -199,8 +213,13 @@ function fromProduct(product: AdminProduct): ProductForm {
     slug: product.id,
     category: product.category,
     price: String(product.price),
-    image: product.image,
     position: String(product.position),
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      color: variant.color,
+      image: variant.image,
+      quantity: String(variant.quantity),
+    })),
     translations: {
       en: text(product.translations.en),
       fr: text(product.translations.fr),
@@ -217,6 +236,7 @@ export function AdminProductPage() {
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(!isNew);
 
   useEffect(() => {
@@ -248,6 +268,28 @@ export function AdminProductPage() {
     }));
   };
 
+  const updateVariant = (index: number, patch: Partial<VariantFields>) => {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((variant, i) => (i === index ? { ...variant, ...patch } : variant)),
+    }));
+  };
+
+  const onVariantImageSelected = async (index: number, file: File | undefined) => {
+    if (!file || !token) return;
+    setUploadingIndex(index);
+    setError(null);
+    try {
+      const result = await adminUpload<{ image: string }>("/api/products/upload", file, token);
+      updateVariant(index, { image: result.image });
+    } catch (caught) {
+      if (caught instanceof AdminApiError && caught.status === 401) logout();
+      setError(message(caught));
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const price = Number(form.price);
@@ -258,6 +300,38 @@ export function AdminProductPage() {
     }
     if (form.position.trim() === "" || !Number.isInteger(position) || position < 0) {
       setError("Position must be a whole number");
+      return;
+    }
+    if (form.variants.length < 1) {
+      setError("Add at least one color variant");
+      return;
+    }
+
+    const variants = [];
+    for (const variant of form.variants) {
+      const color = variant.color.trim();
+      const id = (variant.id.trim() || slugifyColor(color));
+      const quantity = Number(variant.quantity);
+      if (!color) {
+        setError("Each variant needs a color name");
+        return;
+      }
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
+        setError(`Invalid variant id for ${color}`);
+        return;
+      }
+      if (variant.quantity.trim() === "" || !Number.isInteger(quantity) || quantity < 0) {
+        setError(`Stock for ${color} must be a whole number`);
+        return;
+      }
+      if (!variant.image.trim()) {
+        setError(`Upload an image for ${color}`);
+        return;
+      }
+      variants.push({ id, color, image: variant.image.trim(), quantity });
+    }
+    if (new Set(variants.map((variant) => variant.id)).size !== variants.length) {
+      setError("Variant ids must be unique");
       return;
     }
 
@@ -275,8 +349,8 @@ export function AdminProductPage() {
         slug: form.slug.trim(),
         category: form.category,
         price,
-        image: form.image.trim(),
         position,
+        variants,
         translations: {
           en: translation(form.translations.en),
           fr: translation(form.translations.fr),
@@ -315,10 +389,62 @@ export function AdminProductPage() {
           </label>
           <Field label="Price" type="number" value={form.price} onChange={(price) => setForm({ ...form, price })} />
           <Field label="Position" type="number" value={form.position} onChange={(position) => setForm({ ...form, position })} />
-          <div className="md:col-span-2">
-            <Field label="Image URL" value={form.image} onChange={(image) => setForm({ ...form, image })} />
-          </div>
         </div>
+
+        <section className="space-y-5">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#857a62]">Colors</p>
+              <h2 className="mt-2 font-serif text-3xl">Variants</h2>
+            </div>
+            <button
+              className="border border-[#1d241b] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em]"
+              onClick={() => setForm((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }))}
+              type="button"
+            >
+              Add color
+            </button>
+          </div>
+          {form.variants.map((variant, index) => (
+            <div className="grid gap-4 border border-[#ddd8ce] p-5 md:grid-cols-[1fr_1fr_auto]" key={index}>
+              <Field
+                label="Color name"
+                value={variant.color}
+                onChange={(color) => updateVariant(index, { color, id: variant.id || slugifyColor(color) })}
+              />
+              <Field label="Stock" type="number" value={variant.quantity} onChange={(quantity) => updateVariant(index, { quantity })} />
+              <div className="md:col-span-2 space-y-3">
+                <label className="block">
+                  <span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">Photo</span>
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none file:me-4 file:border-0 file:bg-[#1d241b] file:px-4 file:py-2 file:text-[10px] file:font-semibold file:uppercase file:tracking-[0.16em] file:text-white"
+                    disabled={uploadingIndex !== null || pending}
+                    onChange={(event) => void onVariantImageSelected(index, event.target.files?.[0])}
+                    type="file"
+                  />
+                </label>
+                {uploadingIndex === index && <p className="text-sm text-[#6d6960]">Uploading image…</p>}
+                {variant.image && (
+                  <div className="flex items-start gap-4">
+                    <img alt="" className="size-20 object-cover" src={variant.image} />
+                    <p className="break-all text-[10px] uppercase tracking-[0.12em] text-[#7d786f]">{variant.image}</p>
+                  </div>
+                )}
+              </div>
+              {form.variants.length > 1 && (
+                <button
+                  className="justify-self-start text-[10px] uppercase tracking-[0.16em] text-[#8a3d32] md:col-span-3"
+                  onClick={() => setForm((current) => ({ ...current, variants: current.variants.filter((_, i) => i !== index) }))}
+                  type="button"
+                >
+                  Remove color
+                </button>
+              )}
+            </div>
+          ))}
+        </section>
+
         <div className="grid gap-8 lg:grid-cols-3">
           {locales.map((locale) => (
             <section className="space-y-4" key={locale}>
@@ -335,7 +461,7 @@ export function AdminProductPage() {
         </div>
         {error && <p className="text-sm text-[#8a3d32]">{error}</p>}
         <div className="flex items-center gap-6">
-          <button className="bg-[#1d241b] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60" disabled={pending} type="submit">
+          <button className="bg-[#1d241b] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60" disabled={pending || uploadingIndex !== null} type="submit">
             {pending ? "Saving" : "Save product"}
           </button>
           <Link className="text-[10px] uppercase tracking-[0.16em]" to="/admin/products">Cancel</Link>
@@ -408,7 +534,7 @@ export function AdminOrdersPage() {
               </div>
               <ul className="mt-5 space-y-1 text-sm">
                 {order.items.map((item) => (
-                  <li key={`${order.id}-${item.productId}`}>{item.quantity} × {item.name}</li>
+                  <li key={`${order.id}-${item.productId}-${item.variantId}`}>{item.quantity} × {item.name} ({item.color})</li>
                 ))}
               </ul>
             </article>

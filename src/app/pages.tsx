@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import { request } from "./api";
 import { useCatalog } from "./catalog";
@@ -176,16 +176,40 @@ export function ProductPage() {
   const { addToCart } = useShop();
   const { copy, locale } = useLocale();
   const { products, loading, error } = useCatalog();
+  const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const product = products?.find((item) => item.id === productId);
+  const selectedVariant =
+    product?.variants.find((variant) => variant.id === variantId) ??
+    product?.variants.find((variant) => variant.quantity > 0) ??
+    product?.variants[0];
+
+  useEffect(() => {
+    setQuantity(1);
+    setAdded(false);
+    setVariantId(null);
+  }, [productId]);
+
+  useEffect(() => {
+    if (!selectedVariant) return;
+    if (selectedVariant.quantity < 1) {
+      setQuantity(1);
+      return;
+    }
+    setQuantity((current) => Math.min(current, selectedVariant.quantity));
+  }, [selectedVariant]);
+
   if (loading) return <main className="px-5 py-24 text-sm text-[#6d6960]">Loading the collection</main>;
   if (error) return <main className="px-5 py-24 text-sm text-[#8a3d32]">{error}</main>;
-  const product = products?.find((item) => item.id === productId);
-  if (!product || !products) return <Navigate replace to="/not-found" />;
+  if (!product || !products || !selectedVariant) return <Navigate replace to="/not-found" />;
   const related = products.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
+  const inStock = selectedVariant.quantity > 0;
+  const maxQuantity = Math.max(1, selectedVariant.quantity);
 
   const add = () => {
-    addToCart(product.id, quantity);
+    if (!inStock) return;
+    addToCart(product.id, selectedVariant.id, Math.min(quantity, selectedVariant.quantity));
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   };
@@ -194,7 +218,7 @@ export function ProductPage() {
     <main>
       <div className="mx-auto grid max-w-[1440px] md:grid-cols-2">
         <div className="aspect-[4/5] bg-[#ebe7de] md:min-h-[740px]">
-          <img alt={product.name} className="h-full w-full object-cover" src={product.image} />
+          <img alt={product.name} className="h-full w-full object-cover" src={selectedVariant.image} />
         </div>
         <div className="flex items-center px-5 py-14 md:px-[12%] md:py-20">
           <div className="w-full max-w-lg">
@@ -206,6 +230,25 @@ export function ProductPage() {
               <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#817c72]">{copy.product.materials}</p>
               <p className="mt-2 text-sm">{product.material}</p>
             </div>
+            {product.variants.length > 0 && (
+              <label className="mt-7 block">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.2em]">{copy.product.color}</span>
+                <select
+                  className="mt-3 w-full border border-[#cbc5b9] bg-transparent px-4 py-4 text-sm outline-none"
+                  onChange={(event) => {
+                    setVariantId(event.target.value);
+                    setQuantity(1);
+                  }}
+                  value={selectedVariant.id}
+                >
+                  {product.variants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.color}{variant.quantity < 1 ? ` — ${copy.product.outOfStock}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {product.category === "Rings" && (
               <label className="mt-7 block">
                 <span className="text-[9px] font-semibold uppercase tracking-[0.2em]">{copy.product.size}</span>
@@ -215,14 +258,22 @@ export function ProductPage() {
               </label>
             )}
             <div className="mt-7 flex gap-3">
-              <div className="flex items-center border border-[#cbc5b9]">
-                <button aria-label={copy.a11y.decrease} className="grid size-12 place-items-center" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Icon name="minus" size={15} /></button>
-                <span className="w-7 text-center text-xs">{quantity}</span>
-                <button aria-label={copy.a11y.increase} className="grid size-12 place-items-center" onClick={() => setQuantity(quantity + 1)}><Icon name="plus" size={15} /></button>
-              </div>
-              <button className="flex flex-1 items-center justify-center gap-3 bg-[#1d241b] px-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#30392d]" onClick={add}>
-                {added ? <><Icon name="check" size={16} /> {copy.product.added}</> : copy.product.add}
-              </button>
+              {inStock ? (
+                <>
+                  <div className="flex items-center border border-[#cbc5b9]">
+                    <button aria-label={copy.a11y.decrease} className="grid size-12 place-items-center" onClick={() => setQuantity(Math.max(1, quantity - 1))} type="button"><Icon name="minus" size={15} /></button>
+                    <span className="w-7 text-center text-xs">{quantity}</span>
+                    <button aria-label={copy.a11y.increase} className="grid size-12 place-items-center" onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))} type="button"><Icon name="plus" size={15} /></button>
+                  </div>
+                  <button className="flex flex-1 items-center justify-center gap-3 bg-[#1d241b] px-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#30392d]" onClick={add} type="button">
+                    {added ? <><Icon name="check" size={16} /> {copy.product.added}</> : copy.product.add}
+                  </button>
+                </>
+              ) : (
+                <p className="flex flex-1 items-center justify-center border border-[#cbc5b9] px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8a3d32]">
+                  {copy.product.outOfStock}
+                </p>
+              )}
             </div>
             <div className="mt-8 grid grid-cols-2 gap-4 text-[9px] uppercase leading-5 tracking-[0.14em] text-[#6e6a61]">
               {copy.product.assurances.map((item) => <p key={item}>{item}</p>)}
@@ -270,24 +321,28 @@ export function CartPage() {
         <h1 className="font-serif text-6xl md:text-8xl">{copy.cart.title}</h1>
         <div className="mt-12 grid gap-14 lg:grid-cols-[1.7fr_1fr]">
           <div className="border-t border-[#d8d3c8]">
-            {unresolvedIds.map((id) => (
-              <p className="border-b border-[#d8d3c8] py-6 text-sm text-[#8a3d32]" key={id}>
-                Unknown product {id}. <button className="underline" onClick={() => removeFromCart(id)} type="button">{copy.cart.remove}</button>
-              </p>
-            ))}
-            {cart.map(({ product, quantity }) => (
-                <article className="grid grid-cols-[110px_1fr] gap-5 border-b border-[#d8d3c8] py-6 sm:grid-cols-[150px_1fr_auto]" key={product.id}>
-                  <Link className="aspect-[4/5] bg-[#e9e5dc]" to={`/product/${product.id}`}><img alt={product.name} className="h-full w-full object-cover" src={product.image} /></Link>
+            {unresolvedIds.map((id) => {
+              const [productId, variantId] = id.split("::");
+              return (
+                <p className="border-b border-[#d8d3c8] py-6 text-sm text-[#8a3d32]" key={id}>
+                  Unknown product {id}.{" "}
+                  <button className="underline" onClick={() => removeFromCart(productId, variantId)} type="button">{copy.cart.remove}</button>
+                </p>
+              );
+            })}
+            {cart.map(({ product, variant, quantity }) => (
+                <article className="grid grid-cols-[110px_1fr] gap-5 border-b border-[#d8d3c8] py-6 sm:grid-cols-[150px_1fr_auto]" key={`${product.id}-${variant.id}`}>
+                  <Link className="aspect-[4/5] bg-[#e9e5dc]" to={`/product/${product.id}`}><img alt={product.name} className="h-full w-full object-cover" src={variant.image} /></Link>
                   <div className="py-1">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-[#837e74]">{copy.categories[product.category]}</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-[#837e74]">{copy.categories[product.category]} · {variant.color}</p>
                     <Link className="mt-2 block font-serif text-2xl" to={`/product/${product.id}`}>{product.name}</Link>
                     <p className="mt-2 text-xs text-[#706c63]">{product.material}</p>
                     <div className="mt-5 flex w-fit items-center border border-[#cbc5b9]">
-                      <button aria-label={copy.a11y.decrease} className="grid size-9 place-items-center" onClick={() => updateQuantity(product.id, quantity - 1)}><Icon name="minus" size={13} /></button>
+                      <button aria-label={copy.a11y.decrease} className="grid size-9 place-items-center" onClick={() => updateQuantity(product.id, variant.id, quantity - 1)} type="button"><Icon name="minus" size={13} /></button>
                       <span className="w-7 text-center text-xs">{quantity}</span>
-                      <button aria-label={copy.a11y.increase} className="grid size-9 place-items-center" onClick={() => updateQuantity(product.id, quantity + 1)}><Icon name="plus" size={13} /></button>
+                      <button aria-label={copy.a11y.increase} className="grid size-9 place-items-center" disabled={quantity >= variant.quantity} onClick={() => updateQuantity(product.id, variant.id, quantity + 1)} type="button"><Icon name="plus" size={13} /></button>
                     </div>
-                    <button className="mt-4 text-[9px] uppercase tracking-[0.16em] text-[#817c73] underline underline-offset-4" onClick={() => removeFromCart(product.id)}>{copy.cart.remove}</button>
+                    <button className="mt-4 text-[9px] uppercase tracking-[0.16em] text-[#817c73] underline underline-offset-4" onClick={() => removeFromCart(product.id, variant.id)} type="button">{copy.cart.remove}</button>
                   </div>
                   <p className="col-start-2 row-start-2 text-sm sm:col-start-3 sm:row-start-1 sm:pt-1">{formatPrice(product.price * quantity, locale)}</p>
                 </article>
@@ -336,7 +391,11 @@ export function CheckoutPage() {
         method: "POST",
         body: {
           ...form,
-          items: cart.map(({ product, quantity }) => ({ productId: product.id, quantity })),
+          items: cart.map(({ product, variant, quantity }) => ({
+            productId: product.id,
+            variantId: variant.id,
+            quantity,
+          })),
         },
       });
       clearCart();
@@ -390,10 +449,10 @@ export function CheckoutPage() {
           <aside className="h-fit bg-[#ede9e0] p-6 md:p-8 lg:sticky lg:top-28">
             <h2 className="font-serif text-3xl">{copy.checkout.pieces}</h2>
             <div className="mt-6 space-y-5">
-              {cart.map(({ product, quantity }) => (
-                  <div className="flex gap-4" key={product.id}>
-                    <div className="relative size-20 shrink-0 bg-[#ddd8ce]"><img alt="" className="h-full w-full object-cover" src={product.image} /><span className="absolute -end-2 -top-2 grid size-5 place-items-center rounded-full bg-[#1d241b] text-[9px] text-white">{quantity}</span></div>
-                    <div className="flex flex-1 justify-between gap-3 pt-1"><div><p className="font-serif text-lg leading-tight">{product.name}</p><p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-[#777269]">{copy.categories[product.category]}</p></div><p className="text-xs">{formatPrice(product.price * quantity, locale)}</p></div>
+              {cart.map(({ product, variant, quantity }) => (
+                    <div className="flex gap-4" key={`${product.id}-${variant.id}`}>
+                    <div className="relative size-20 shrink-0 bg-[#ddd8ce]"><img alt="" className="h-full w-full object-cover" src={variant.image} /><span className="absolute -end-2 -top-2 grid size-5 place-items-center rounded-full bg-[#1d241b] text-[9px] text-white">{quantity}</span></div>
+                    <div className="flex flex-1 justify-between gap-3 pt-1"><div><p className="font-serif text-lg leading-tight">{product.name}</p><p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-[#777269]">{copy.categories[product.category]} · {variant.color}</p></div><p className="text-xs">{formatPrice(product.price * quantity, locale)}</p></div>
                   </div>
               ))}
             </div>

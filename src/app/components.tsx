@@ -179,9 +179,12 @@ export function ProductCard({ product }: { product: Product }) {
   const [added, setAdded] = useState(false);
   const { addToCart } = useShop();
   const { copy, locale } = useLocale();
+  const defaultVariant = product.variants.find((variant) => variant.quantity > 0) ?? product.variants[0];
+  const inStock = product.variants.some((variant) => variant.quantity > 0);
 
   const add = () => {
-    addToCart(product.id);
+    if (!inStock || !defaultVariant) return;
+    addToCart(product.id, defaultVariant.id);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1600);
   };
@@ -193,12 +196,15 @@ export function ProductCard({ product }: { product: Product }) {
           <img alt={product.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" loading="lazy" src={product.image} />
         </Link>
         {product.label && <span className="absolute start-3 top-3 bg-[#f7f5f0]/90 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em]">{product.label}</span>}
+        {!inStock && <span className="absolute start-3 bottom-3 bg-[#f7f5f0]/90 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em]">{copy.product.outOfStock}</span>}
         <button aria-label={copy.a11y.favorite(product.name)} className={`absolute end-3 top-3 grid size-9 place-items-center rounded-full bg-[#f7f5f0]/90 ${favorite ? "text-[#a77048]" : ""}`} onClick={() => setFavorite(!favorite)}>
           <svg aria-hidden="true" fill={favorite ? "currentColor" : "none"} height="17" viewBox="0 0 24 24" width="17" stroke="currentColor" strokeWidth="1.5"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></svg>
         </button>
-        <button className="absolute inset-x-3 bottom-3 translate-y-3 bg-[#f7f5f0] py-3 text-[10px] font-semibold uppercase tracking-[0.2em] opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 focus:translate-y-0 focus:opacity-100" onClick={add}>
-          {added ? copy.card.added : copy.card.quickAdd}
-        </button>
+        {inStock && (
+          <button className="absolute inset-x-3 bottom-3 translate-y-3 bg-[#f7f5f0] py-3 text-[10px] font-semibold uppercase tracking-[0.2em] opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 focus:translate-y-0 focus:opacity-100" onClick={add}>
+            {added ? copy.card.added : copy.card.quickAdd}
+          </button>
+        )}
       </div>
       <Link className="mt-4 flex items-start justify-between gap-3" to={`/product/${product.id}`}>
         <h3 className="font-serif text-xl leading-tight">{product.name}</h3>
