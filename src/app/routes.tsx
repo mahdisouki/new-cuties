@@ -1,5 +1,5 @@
 import { createBrowserRouter } from "react-router";
-import { AdminIndex, AdminLoginPage, AdminOrdersPage, AdminProductPage, AdminProductsPage, AdminRoot } from "./admin/pages";
+import { AdminIndex, AdminLoginPage, AdminOrdersPage, AdminProductPage, AdminProductsPage, AdminRoot, AdminVisitorsPage } from "./admin/pages";
 import { Layout } from "./components";
 import {
   CartPage,
@@ -24,6 +24,7 @@ export const router = createBrowserRouter([
       { path: "products/new", Component: AdminProductPage },
       { path: "products/:slug", Component: AdminProductPage },
       { path: "orders", Component: AdminOrdersPage },
+      { path: "visitors", Component: AdminVisitorsPage },
     ],
   },
   {

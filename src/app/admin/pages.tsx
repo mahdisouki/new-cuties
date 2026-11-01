@@ -50,6 +50,7 @@ function AdminBar() {
           <nav className="flex items-center gap-5">
             <NavLink className={link} to="/admin/products">Products</NavLink>
             <NavLink className={link} to="/admin/orders">Orders</NavLink>
+            <NavLink className={link} to="/admin/visitors">Visitors</NavLink>
           </nav>
         </div>
         <div className="flex items-center gap-5">
@@ -552,6 +553,81 @@ function Field({ label, value, onChange, type = "text", disabled = false }: { la
       <span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">{label}</span>
       <input className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none focus:border-[#555148] disabled:text-[#8a857c]" disabled={disabled} onChange={(event) => onChange(event.target.value)} required={label !== "Label"} type={type} value={value} />
     </label>
+  );
+}
+
+type Presence = {
+  count: number;
+  visitors: { city: string | null; country: string | null; lastSeen: string }[];
+};
+
+function placeLabel(city: string | null, country: string | null) {
+  const countryName = country ? new Intl.DisplayNames(["en"], { type: "region" }).of(country) : undefined;
+  const parts = [city, countryName].filter((part) => part);
+  if (parts.length === 0) return "Location unavailable";
+  return parts.join(", ");
+}
+
+export function AdminVisitorsPage() {
+  const { token, logout } = useAdminAuth();
+  const [presence, setPresence] = useState<Presence | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    const load = () => {
+      adminApi<Presence>("/api/presence", { token })
+        .then((result) => {
+          if (!active) return;
+          setPresence(result);
+          setError(null);
+        })
+        .catch((caught: unknown) => {
+          if (!active) return;
+          if (caught instanceof AdminApiError && caught.status === 401) logout();
+          setError(message(caught));
+        });
+    };
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [token, logout]);
+
+  const places = new Map<string, number>();
+  for (const visitor of presence?.visitors ?? []) {
+    const label = placeLabel(visitor.city, visitor.country);
+    places.set(label, (places.get(label) ?? 0) + 1);
+  }
+
+  return (
+    <main className="mx-auto max-w-[1100px] px-5 py-12">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#857a62]">Right now</p>
+      <h1 className="mt-3 font-serif text-5xl font-light">Visitors</h1>
+      {error && <p className="mt-8 text-sm text-[#8a3d32]">{error}</p>}
+      {presence === null && !error && <p className="mt-10 text-sm text-[#6d6960]">Loading visitors</p>}
+      {presence && (
+        <>
+          <p className="mt-8 font-serif text-7xl">{presence.count}</p>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[#7d786f]">Active in the last minute</p>
+          {places.size === 0 ? (
+            <p className="mt-10 text-sm text-[#6d6960]">No one is on the shop right now.</p>
+          ) : (
+            <ul className="mt-10 divide-y divide-[#ddd8ce] border-y border-[#ddd8ce]">
+              {[...places].map(([label, count]) => (
+                <li className="flex items-center justify-between py-4 text-sm" key={label}>
+                  <span>{label}</span>
+                  <span>{count}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </main>
   );
 }
 

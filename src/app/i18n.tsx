@@ -225,6 +225,12 @@ const en: Copy = {
             "We keep the order while we need it to deliver the piece and to handle a return or the two-year care warranty.",
           ],
         },
+        {
+          heading: "Who is on the site",
+          paragraphs: [
+            "While a shop page is open, we record that this browser is here and the approximate city of the connection. This is not tied to your name. It is removed about a minute after you leave.",
+          ],
+        },
       ],
     },
     policies: {
@@ -487,6 +493,12 @@ const fr: Copy = {
             "Nous gardons la commande tant que nous en avons besoin pour livrer la pièce et pour un retour ou la garantie d'entretien de deux ans.",
           ],
         },
+        {
+          heading: "Qui est sur le site",
+          paragraphs: [
+            "Tant qu'une page de la boutique est ouverte, nous notons que ce navigateur est là et la ville approximative de la connexion. Ce n'est pas relié à votre nom. C'est retiré environ une minute après votre départ.",
+          ],
+        },
       ],
     },
     policies: {
@@ -747,6 +759,12 @@ const ar: Copy = {
           heading: "كم نحتفظ بالطلب",
           paragraphs: [
             "نحتفظ بالطلب ما دمنا نحتاجه لتوصيل القطعة ولمعالجة الإرجاع أو ضمان العناية لمدة عامين.",
+          ],
+        },
+        {
+          heading: "من هو في الموقع",
+          paragraphs: [
+            "ما دامت صفحة من المتجر مفتوحة، نسجل أن هذا المتصفح موجود والمدينة التقريبية للاتصال. هذا غير مرتبط باسمك. يُحذف بعد نحو دقيقة من مغادرتك.",
           ],
         },
       ],

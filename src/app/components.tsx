@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { type Product } from "./data";
+import { request } from "./api";
 import { formatPrice, useLocale, type Locale } from "./i18n";
 import { useShop } from "./store";
 
@@ -92,6 +93,27 @@ export function Layout() {
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
+  }, []);
+
+  useEffect(() => {
+    const key = "cuties-visitor";
+    const existing = sessionStorage.getItem(key);
+    const visitorId = existing ?? crypto.randomUUID();
+    if (!existing) sessionStorage.setItem(key, visitorId);
+
+    let stopped = false;
+    const send = () => {
+      if (stopped) return;
+      void request("/api/presence", { method: "POST", body: { visitorId } }).catch((error: unknown) => {
+        if (!(error instanceof Error)) throw error;
+      });
+    };
+    send();
+    const timer = window.setInterval(send, 20_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   return (
