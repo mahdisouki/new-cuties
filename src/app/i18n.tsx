@@ -6,6 +6,12 @@ import {
 } from "react";
 import { products, type Product } from "./data";
 
+export type LegalDocument = {
+  title: string;
+  updated: string;
+  sections: { heading: string; paragraphs: string[] }[];
+};
+
 export type Locale = "en" | "fr" | "ar";
 
 type CategoryId = "All" | "Jewelry" | Product["category"];
@@ -36,9 +42,14 @@ type Copy = {
   };
   footer: {
     blurb: string;
-    columns: { title: string; links: string[] }[];
+    columns: { title: string; links: { label: string; to: string }[] }[];
     copyright: string;
     secure: string;
+  };
+  legal: {
+    privacy: LegalDocument;
+    policies: LegalDocument;
+    terms: LegalDocument;
   };
   card: { quickAdd: string; added: string };
   home: {
@@ -78,6 +89,16 @@ type Copy = {
     added: string;
     add: string;
     outOfStock: string;
+    orderTitle: string;
+    orderBody: string;
+    name: string;
+    address: string;
+    phone: string;
+    buy: string;
+    placing: string;
+    thanks: string;
+    confirmed: string;
+    close: string;
     assurances: string[];
     related: string;
   };
@@ -143,12 +164,142 @@ const en: Copy = {
   footer: {
     blurb: "Fine jewelry and watches with a modern soul, crafted consciously to last for generations.",
     columns: [
-      { title: "Client care", links: ["Contact", "Shipping & returns", "Care guide"] },
-      { title: "About", links: ["Our story", "Materials", "Journal"] },
-      { title: "Follow", links: ["Instagram", "Pinterest", "TikTok"] },
+      { title: "Client care", links: [
+        { label: "Contact", to: "/" },
+        { label: "Shipping & returns", to: "/policies" },
+        { label: "Care guide", to: "/policies" },
+      ] },
+      { title: "About", links: [
+        { label: "Our story", to: "/" },
+        { label: "Materials", to: "/" },
+        { label: "Journal", to: "/" },
+      ] },
+      { title: "Follow", links: [
+        { label: "Instagram", to: "/" },
+        { label: "Pinterest", to: "/" },
+        { label: "TikTok", to: "/" },
+      ] },
     ],
     copyright: "© 2025 Cuties Fine Jewelry & Watches",
     secure: "Cash on delivery · Delivery 7 DT",
+  },
+  legal: {
+    privacy: {
+      title: "Privacy",
+      updated: "Updated 1 November 2026",
+      sections: [
+        {
+          heading: "What this covers",
+          paragraphs: [
+            "This page explains what Cuties keeps when you visit the shop or place an order. There is no customer account.",
+          ],
+        },
+        {
+          heading: "What you give us",
+          paragraphs: [
+            "An order from a product page includes your name, address, phone number, the piece, its color, and the quantity.",
+            "Checkout includes your email, first name, last name, address, city, and postal code, with the pieces in your bag.",
+          ],
+        },
+        {
+          heading: "What stays in your browser",
+          paragraphs: [
+            "Your bag and your language choice are saved on this device so they are still there when you come back. We do not use that information to advertise to you.",
+          ],
+        },
+        {
+          heading: "Why we use it",
+          paragraphs: [
+            "We use the order details to prepare the piece, call you, and deliver it. We do not sell this information.",
+          ],
+        },
+        {
+          heading: "Payment",
+          paragraphs: [
+            "You pay cash when the order arrives. We do not ask for a card number.",
+          ],
+        },
+        {
+          heading: "How long we keep an order",
+          paragraphs: [
+            "We keep the order while we need it to deliver the piece and to handle a return or the two-year care warranty.",
+          ],
+        },
+      ],
+    },
+    policies: {
+      title: "Policies",
+      updated: "Updated 1 November 2026",
+      sections: [
+        {
+          heading: "Delivery",
+          paragraphs: [
+            "Delivery is 7 DT on every order. That amount is added to the total before you place the order.",
+          ],
+        },
+        {
+          heading: "Payment",
+          paragraphs: [
+            "You pay cash when the order arrives. We call the phone number on the order to confirm delivery.",
+          ],
+        },
+        {
+          heading: "Returns",
+          paragraphs: [
+            "You can return or exchange a piece within 30 days of delivery if it is unworn and still in its Cuties packaging. Tell us when we call, or when the order is delivered.",
+          ],
+        },
+        {
+          heading: "Care warranty",
+          paragraphs: [
+            "A piece has a two-year care warranty for a fault in how it was made. The warranty does not cover loss, everyday wear, or damage after delivery.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      title: "Terms and conditions",
+      updated: "Updated 1 November 2026",
+      sections: [
+        {
+          heading: "Orders",
+          paragraphs: [
+            "Cuties sells jewelry and watches on this website. When you submit an order, you ask us to sell you the pieces shown, at the price on the page, plus 7 DT for delivery.",
+            "We accept the order when we confirm it with you and can deliver it. We will not fulfill an order if the piece is no longer in stock or if the name, address, or phone number cannot be used for delivery.",
+          ],
+        },
+        {
+          heading: "Prices",
+          paragraphs: [
+            "Prices are in Tunisian dinars. The price that applies is the price shown when you submit the order.",
+          ],
+        },
+        {
+          heading: "Your details",
+          paragraphs: [
+            "You must give a name, an address, and a phone number that we can use to reach you and deliver the order.",
+          ],
+        },
+        {
+          heading: "Delivery and payment",
+          paragraphs: [
+            "Delivery and cash payment follow the Policies page. You pay the order total, including the 7 DT delivery fee, in cash when it arrives.",
+          ],
+        },
+        {
+          heading: "Returns and care",
+          paragraphs: [
+            "Returns and the care warranty follow the Policies page.",
+          ],
+        },
+        {
+          heading: "This website",
+          paragraphs: [
+            "The photographs and text on this website belong to Cuties. You may not copy them for your own shop.",
+          ],
+        },
+      ],
+    },
   },
   card: { quickAdd: "Quick add", added: "Added to bag" },
   home: {
@@ -188,6 +339,16 @@ const en: Copy = {
     added: "Added",
     add: "Add to bag",
     outOfStock: "Out of stock",
+    orderTitle: "Order this piece",
+    orderBody: "Leave your name, address, and phone number. Pay cash when it arrives.",
+    name: "Name",
+    address: "Address",
+    phone: "Phone number",
+    buy: "Buy",
+    placing: "Placing order",
+    thanks: "Order received",
+    confirmed: "We will call you to confirm delivery.",
+    close: "Close",
     assurances: [
       "Delivery 7 DT, cash on delivery",
       "30-day returns & exchanges",
@@ -265,12 +426,142 @@ const fr: Copy = {
   footer: {
     blurb: "Joaillerie et montres d'exception, pensées pour durer de génération en génération.",
     columns: [
-      { title: "Service client", links: ["Contact", "Livraison et retours", "Guide d'entretien"] },
-      { title: "À propos", links: ["Notre histoire", "Matières", "Journal"] },
-      { title: "Suivre", links: ["Instagram", "Pinterest", "TikTok"] },
+      { title: "Service client", links: [
+        { label: "Contact", to: "/" },
+        { label: "Livraison et retours", to: "/policies" },
+        { label: "Guide d'entretien", to: "/policies" },
+      ] },
+      { title: "À propos", links: [
+        { label: "Notre histoire", to: "/" },
+        { label: "Matières", to: "/" },
+        { label: "Journal", to: "/" },
+      ] },
+      { title: "Suivre", links: [
+        { label: "Instagram", to: "/" },
+        { label: "Pinterest", to: "/" },
+        { label: "TikTok", to: "/" },
+      ] },
     ],
     copyright: "© 2025 Cuties Joaillerie & Montres",
     secure: "Paiement à la livraison · Livraison 7 DT",
+  },
+  legal: {
+    privacy: {
+      title: "Confidentialité",
+      updated: "Mis à jour le 1 novembre 2026",
+      sections: [
+        {
+          heading: "Ce que cela couvre",
+          paragraphs: [
+            "Cette page explique ce que Cuties conserve quand vous visitez la boutique ou passez une commande. Il n'y a pas de compte client.",
+          ],
+        },
+        {
+          heading: "Ce que vous nous donnez",
+          paragraphs: [
+            "Une commande depuis une fiche produit comprend votre nom, votre adresse, votre numéro de téléphone, la pièce, sa couleur et la quantité.",
+            "Le paiement comprend votre e-mail, votre prénom, votre nom, votre adresse, votre ville et votre code postal, avec les pièces de votre sac.",
+          ],
+        },
+        {
+          heading: "Ce qui reste dans votre navigateur",
+          paragraphs: [
+            "Votre sac et votre langue sont enregistrés sur cet appareil pour être encore là à votre retour. Nous n'utilisons pas ces informations pour vous afficher de la publicité.",
+          ],
+        },
+        {
+          heading: "Pourquoi nous les utilisons",
+          paragraphs: [
+            "Nous utilisons les détails de la commande pour préparer la pièce, vous appeler et la livrer. Nous ne vendons pas ces informations.",
+          ],
+        },
+        {
+          heading: "Paiement",
+          paragraphs: [
+            "Vous payez en espèces à l'arrivée de la commande. Nous ne demandons pas de numéro de carte.",
+          ],
+        },
+        {
+          heading: "Combien de temps nous gardons une commande",
+          paragraphs: [
+            "Nous gardons la commande tant que nous en avons besoin pour livrer la pièce et pour un retour ou la garantie d'entretien de deux ans.",
+          ],
+        },
+      ],
+    },
+    policies: {
+      title: "Politiques",
+      updated: "Mis à jour le 1 novembre 2026",
+      sections: [
+        {
+          heading: "Livraison",
+          paragraphs: [
+            "La livraison est de 7 DT pour chaque commande. Ce montant est ajouté au total avant que vous passiez la commande.",
+          ],
+        },
+        {
+          heading: "Paiement",
+          paragraphs: [
+            "Vous payez en espèces à l'arrivée de la commande. Nous appelons le numéro indiqué sur la commande pour confirmer la livraison.",
+          ],
+        },
+        {
+          heading: "Retours",
+          paragraphs: [
+            "Vous pouvez retourner ou échanger une pièce dans les 30 jours après la livraison si elle n'a pas été portée et qu'elle est encore dans son écrin Cuties. Dites-le-nous lors de l'appel, ou à la livraison.",
+          ],
+        },
+        {
+          heading: "Garantie d'entretien",
+          paragraphs: [
+            "Une pièce a une garantie d'entretien de deux ans pour un défaut de fabrication. La garantie ne couvre pas la perte, l'usure du quotidien, ni un dommage après la livraison.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      title: "Conditions générales",
+      updated: "Mis à jour le 1 novembre 2026",
+      sections: [
+        {
+          heading: "Commandes",
+          paragraphs: [
+            "Cuties vend des bijoux et des montres sur ce site. Quand vous envoyez une commande, vous nous demandez de vous vendre les pièces affichées, au prix de la page, plus 7 DT de livraison.",
+            "Nous acceptons la commande quand nous la confirmons avec vous et que nous pouvons la livrer. Nous ne livrons pas une commande si la pièce n'est plus en stock, ou si le nom, l'adresse ou le numéro de téléphone ne permettent pas la livraison.",
+          ],
+        },
+        {
+          heading: "Prix",
+          paragraphs: [
+            "Les prix sont en dinars tunisiens. Le prix qui s'applique est celui affiché au moment où vous envoyez la commande.",
+          ],
+        },
+        {
+          heading: "Vos coordonnées",
+          paragraphs: [
+            "Vous devez donner un nom, une adresse et un numéro de téléphone que nous pouvons utiliser pour vous joindre et livrer la commande.",
+          ],
+        },
+        {
+          heading: "Livraison et paiement",
+          paragraphs: [
+            "La livraison et le paiement en espèces suivent la page Politiques. Vous payez le total de la commande, frais de livraison de 7 DT compris, en espèces à l'arrivée.",
+          ],
+        },
+        {
+          heading: "Retours et entretien",
+          paragraphs: [
+            "Les retours et la garantie d'entretien suivent la page Politiques.",
+          ],
+        },
+        {
+          heading: "Ce site",
+          paragraphs: [
+            "Les photographies et les textes de ce site appartiennent à Cuties. Vous ne pouvez pas les copier pour votre propre boutique.",
+          ],
+        },
+      ],
+    },
   },
   card: { quickAdd: "Ajout rapide", added: "Ajouté au sac" },
   home: {
@@ -310,6 +601,16 @@ const fr: Copy = {
     added: "Ajouté",
     add: "Ajouter au sac",
     outOfStock: "Rupture de stock",
+    orderTitle: "Commander cette pièce",
+    orderBody: "Laissez votre nom, votre adresse et votre numéro de téléphone. Payez en espèces à la livraison.",
+    name: "Nom",
+    address: "Adresse",
+    phone: "Numéro de téléphone",
+    buy: "Acheter",
+    placing: "Commande en cours",
+    thanks: "Commande reçue",
+    confirmed: "Nous vous appellerons pour confirmer la livraison.",
+    close: "Fermer",
     assurances: [
       "Livraison 7 DT, paiement à la livraison",
       "Retours et échanges sous 30 jours",
@@ -387,12 +688,142 @@ const ar: Copy = {
   footer: {
     blurb: "مجوهرات وساعات فاخرة بروح معاصرة، تُصنع بعناية لتدوم عبر الأجيال.",
     columns: [
-      { title: "خدمة العملاء", links: ["تواصل", "الشحن والإرجاع", "دليل العناية"] },
-      { title: "عن العلامة", links: ["قصتنا", "المواد", "المجلة"] },
-      { title: "تابعنا", links: ["Instagram", "Pinterest", "TikTok"] },
+      { title: "خدمة العملاء", links: [
+        { label: "تواصل", to: "/" },
+        { label: "الشحن والإرجاع", to: "/policies" },
+        { label: "دليل العناية", to: "/policies" },
+      ] },
+      { title: "عن العلامة", links: [
+        { label: "قصتنا", to: "/" },
+        { label: "المواد", to: "/" },
+        { label: "المجلة", to: "/" },
+      ] },
+      { title: "تابعنا", links: [
+        { label: "Instagram", to: "/" },
+        { label: "Pinterest", to: "/" },
+        { label: "TikTok", to: "/" },
+      ] },
     ],
     copyright: "© 2025 كيوتيز للمجوهرات والساعات",
     secure: "الدفع عند الاستلام · التوصيل 7 د.ت",
+  },
+  legal: {
+    privacy: {
+      title: "الخصوصية",
+      updated: "آخر تحديث في 1 نوفمبر 2026",
+      sections: [
+        {
+          heading: "ماذا تشمل هذه الصفحة",
+          paragraphs: [
+            "توضح هذه الصفحة ما تحتفظ به كيوتيز عندما تزور المتجر أو ترسل طلباً. لا يوجد حساب للعميل.",
+          ],
+        },
+        {
+          heading: "ما تقدمه لنا",
+          paragraphs: [
+            "الطلب من صفحة القطعة يشمل اسمك وعنوانك ورقم هاتفك والقطعة ولونها والكمية.",
+            "إتمام الشراء يشمل بريدك الإلكتروني واسمك الأول واسم العائلة والعنوان والمدينة والرمز البريدي، مع القطع الموجودة في الحقيبة.",
+          ],
+        },
+        {
+          heading: "ما يبقى في متصفحك",
+          paragraphs: [
+            "تُحفظ حقيبتك واختيار اللغة على هذا الجهاز ليبقيا عند عودتك. لا نستخدم هذه المعلومات لعرض إعلانات عليك.",
+          ],
+        },
+        {
+          heading: "لماذا نستخدمها",
+          paragraphs: [
+            "نستخدم تفاصيل الطلب لتجهيز القطعة والاتصال بك وتوصيلها. لا نبيع هذه المعلومات.",
+          ],
+        },
+        {
+          heading: "الدفع",
+          paragraphs: [
+            "تدفع نقداً عند وصول الطلب. لا نطلب رقم بطاقة.",
+          ],
+        },
+        {
+          heading: "كم نحتفظ بالطلب",
+          paragraphs: [
+            "نحتفظ بالطلب ما دمنا نحتاجه لتوصيل القطعة ولمعالجة الإرجاع أو ضمان العناية لمدة عامين.",
+          ],
+        },
+      ],
+    },
+    policies: {
+      title: "السياسات",
+      updated: "آخر تحديث في 1 نوفمبر 2026",
+      sections: [
+        {
+          heading: "التوصيل",
+          paragraphs: [
+            "التوصيل 7 د.ت لكل طلب. يُضاف هذا المبلغ إلى المجموع قبل إرسال الطلب.",
+          ],
+        },
+        {
+          heading: "الدفع",
+          paragraphs: [
+            "تدفع نقداً عند وصول الطلب. نتصل برقم الهاتف المكتوب في الطلب لتأكيد التوصيل.",
+          ],
+        },
+        {
+          heading: "الإرجاع",
+          paragraphs: [
+            "يمكنك إرجاع القطعة أو استبدالها خلال 30 يوماً من التوصيل إذا لم تُلبس وما زالت في تغليف كيوتيز. أخبرنا عند الاتصال، أو عند تسليم الطلب.",
+          ],
+        },
+        {
+          heading: "ضمان العناية",
+          paragraphs: [
+            "لكل قطعة ضمان عناية لمدة عامين إذا كان الخلل في الصنع. لا يشمل الضمان الفقدان أو الاستعمال اليومي أو التلف بعد التوصيل.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      title: "الشروط والأحكام",
+      updated: "آخر تحديث في 1 نوفمبر 2026",
+      sections: [
+        {
+          heading: "الطلبات",
+          paragraphs: [
+            "تبيع كيوتيز المجوهرات والساعات على هذا الموقع. عندما ترسل طلباً، فأنت تطلب شراء القطع المعروضة بالسعر الظاهر في الصفحة، مع 7 د.ت للتوصيل.",
+            "نقبل الطلب عندما نؤكده معك ونقدر على توصيله. لا ننفذ الطلب إذا لم تعد القطعة متوفرة، أو إذا تعذر استخدام الاسم أو العنوان أو رقم الهاتف للتوصيل.",
+          ],
+        },
+        {
+          heading: "الأسعار",
+          paragraphs: [
+            "الأسعار بالدينار التونسي. السعر المعتمد هو السعر الظاهر عند إرسال الطلب.",
+          ],
+        },
+        {
+          heading: "بياناتك",
+          paragraphs: [
+            "يجب أن تكتب اسماً وعنواناً ورقم هاتف يمكننا استخدامهما للوصول إليك وتوصيل الطلب.",
+          ],
+        },
+        {
+          heading: "التوصيل والدفع",
+          paragraphs: [
+            "يتبع التوصيل والدفع نقداً صفحة السياسات. تدفع مجموع الطلب، شاملاً 7 د.ت للتوصيل، نقداً عند الوصول.",
+          ],
+        },
+        {
+          heading: "الإرجاع والعناية",
+          paragraphs: [
+            "يتبع الإرجاع وضمان العناية صفحة السياسات.",
+          ],
+        },
+        {
+          heading: "هذا الموقع",
+          paragraphs: [
+            "الصور والنصوص في هذا الموقع ملك لكيوتيز. لا يجوز نسخها لمتجرك.",
+          ],
+        },
+      ],
+    },
   },
   card: { quickAdd: "إضافة سريعة", added: "أُضيفت إلى الحقيبة" },
   home: {
@@ -432,6 +863,16 @@ const ar: Copy = {
     added: "تمت الإضافة",
     add: "أضف إلى الحقيبة",
     outOfStock: "غير متوفر",
+    orderTitle: "اطلب هذه القطعة",
+    orderBody: "اكتب اسمك وعنوانك ورقم هاتفك. الدفع نقداً عند التوصيل.",
+    name: "الاسم",
+    address: "العنوان",
+    phone: "رقم الهاتف",
+    buy: "شراء",
+    placing: "جارٍ إرسال الطلب",
+    thanks: "تم استلام الطلب",
+    confirmed: "سنتصل بك لتأكيد التوصيل.",
+    close: "إغلاق",
     assurances: [
       "التوصيل 7 د.ت، والدفع عند الاستلام",
       "إرجاع واستبدال خلال 30 يوماً",

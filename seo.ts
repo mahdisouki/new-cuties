@@ -6,6 +6,9 @@ const pages = [
   "/shop?category=Necklaces",
   "/shop?category=Bracelets",
   "/shop?category=Watches",
+  "/privacy",
+  "/policies",
+  "/terms",
 ];
 
 function siteOrigin(url: string | undefined) {

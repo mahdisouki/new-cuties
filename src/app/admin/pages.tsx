@@ -519,9 +519,10 @@ export function AdminOrdersPage() {
             <article className="border border-[#ddd8ce] p-5" key={order.id}>
               <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                 <div>
-                  <p className="font-serif text-2xl">{order.firstName} {order.lastName}</p>
-                  <p className="mt-1 text-sm text-[#6d6960]">{order.email}</p>
-                  <p className="mt-1 text-sm text-[#6d6960]">{order.address}, {order.city} {order.postalCode}</p>
+                  <p className="font-serif text-2xl">{order.name}</p>
+                  {order.phone && <p className="mt-1 text-sm text-[#6d6960]">{order.phone}</p>}
+                  {order.email && <p className="mt-1 text-sm text-[#6d6960]">{order.email}</p>}
+                  <p className="mt-1 text-sm text-[#6d6960]">{[order.address, order.city, order.postalCode].filter(Boolean).join(", ")}</p>
                   <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-[#7d786f]">{new Date(order.createdAt).toLocaleString()}</p>
                 </div>
                 <div className="text-left md:text-right">

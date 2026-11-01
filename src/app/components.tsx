@@ -142,14 +142,21 @@ export function Layout() {
               <div key={title}>
                 <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.2em]">{title}</p>
                 <div className="flex flex-col gap-3">
-                  {links.map((link) => <Link className="w-fit text-xs text-[#6d6960] hover:text-[#191915]" key={link} to="/">{link}</Link>)}
+                  {links.map((link) => <Link className="w-fit text-xs text-[#6d6960] hover:text-[#191915]" key={link.label} to={link.to}>{link.label}</Link>)}
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-16 flex flex-col gap-3 border-t border-[#d5d0c5] pt-6 text-[9px] uppercase tracking-[0.15em] text-[#7b766d] md:flex-row md:justify-between">
-            <p>{copy.footer.copyright}</p>
-            <p>{copy.footer.secure}</p>
+          <div className="mt-16 flex flex-col gap-4 border-t border-[#d5d0c5] pt-6 text-[9px] uppercase tracking-[0.15em] text-[#7b766d]">
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <Link className="hover:text-[#191915]" to="/privacy">{copy.legal.privacy.title}</Link>
+              <Link className="hover:text-[#191915]" to="/policies">{copy.legal.policies.title}</Link>
+              <Link className="hover:text-[#191915]" to="/terms">{copy.legal.terms.title}</Link>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:justify-between">
+              <p>{copy.footer.copyright}</p>
+              <p>{copy.footer.secure}</p>
+            </div>
           </div>
         </div>
       </footer>

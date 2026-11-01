@@ -6,8 +6,11 @@ import {
   CheckoutPage,
   HomePage,
   NotFoundPage,
+  PoliciesPage,
+  PrivacyPage,
   ProductPage,
   ShopPage,
+  TermsPage,
 } from "./pages";
 
 export const router = createBrowserRouter([
@@ -32,6 +35,9 @@ export const router = createBrowserRouter([
       { path: "product/:productId", Component: ProductPage },
       { path: "cart", Component: CartPage },
       { path: "checkout", Component: CheckoutPage },
+      { path: "privacy", Component: PrivacyPage },
+      { path: "policies", Component: PoliciesPage },
+      { path: "terms", Component: TermsPage },
       { path: "not-found", Component: NotFoundPage },
       { path: "*", Component: NotFoundPage },
     ],

@@ -34,12 +34,14 @@ export type AdminProduct = {
 
 export type AdminOrder = {
   id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
   address: string;
-  city: string;
-  postalCode: string;
+  city: string | null;
+  postalCode: string | null;
   items: { productId: string; variantId: string; quantity: number; name: string; color: string; price: number }[];
   subtotal: number;
   deliveryFee: number;

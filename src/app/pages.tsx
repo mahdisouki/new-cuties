@@ -179,6 +179,10 @@ export function ProductPage() {
   const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [order, setOrder] = useState({ name: "", address: "", phone: "" });
+  const [orderPending, setOrderPending] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const product = products?.find((item) => item.id === productId);
   const selectedVariant =
     product?.variants.find((variant) => variant.id === variantId) ??
@@ -189,6 +193,10 @@ export function ProductPage() {
     setQuantity(1);
     setAdded(false);
     setVariantId(null);
+    setOrder({ name: "", address: "", phone: "" });
+    setOrderPending(false);
+    setOrderError(null);
+    setOrderPlaced(false);
   }, [productId]);
 
   useEffect(() => {
@@ -212,6 +220,31 @@ export function ProductPage() {
     addToCart(product.id, selectedVariant.id, Math.min(quantity, selectedVariant.quantity));
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
+  };
+
+  const buy = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!inStock) return;
+    setOrderPending(true);
+    setOrderError(null);
+    try {
+      await request("/api/orders", {
+        method: "POST",
+        body: {
+          name: order.name,
+          phone: order.phone,
+          address: order.address,
+          items: [{ productId: product.id, variantId: selectedVariant.id, quantity }],
+        },
+      });
+      setOrder({ name: "", address: "", phone: "" });
+      setOrderPending(false);
+      setOrderPlaced(true);
+    } catch (caught) {
+      if (!(caught instanceof Error)) throw caught;
+      setOrderError(caught.message);
+      setOrderPending(false);
+    }
   };
 
   return (
@@ -278,9 +311,42 @@ export function ProductPage() {
             <div className="mt-8 grid grid-cols-2 gap-4 text-[9px] uppercase leading-5 tracking-[0.14em] text-[#6e6a61]">
               {copy.product.assurances.map((item) => <p key={item}>{item}</p>)}
             </div>
+            {inStock && (
+              <form className="mt-10 border-t border-[#d8d3c8] pt-8" onSubmit={(event) => void buy(event)}>
+                <h2 className="font-serif text-3xl">{copy.product.orderTitle}</h2>
+                <p className="mt-3 text-sm leading-6 text-[#666259]">{copy.product.orderBody}</p>
+                <div className="mt-6 space-y-4">
+                  <Field label={copy.product.name} value={order.name} onChange={(name) => setOrder({ ...order, name })} />
+                  <Field label={copy.product.address} value={order.address} onChange={(address) => setOrder({ ...order, address })} />
+                  <Field label={copy.product.phone} minLength={8} type="tel" value={order.phone} onChange={(phone) => setOrder({ ...order, phone })} />
+                </div>
+                <div className="mt-6 space-y-3 text-sm">
+                  <div className="flex justify-between"><span>{copy.cart.subtotal}</span><span>{formatPrice(product.price * quantity, locale)}</span></div>
+                  <div className="flex justify-between"><span>{copy.cart.shipping}</span><span>{formatPrice(deliveryFee, locale)}</span></div>
+                  <div className="flex justify-between font-semibold"><span>{copy.cart.total}</span><span>{formatPrice(product.price * quantity + deliveryFee, locale)}</span></div>
+                </div>
+                {orderError && <p className="mt-5 text-sm text-[#8a3d32]">{orderError}</p>}
+                <button className="mt-6 w-full bg-[#1d241b] py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60" disabled={orderPending} type="submit">
+                  {orderPending ? copy.product.placing : copy.product.buy}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
+
+      {orderPlaced && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#191915]/40 p-5" onClick={() => setOrderPlaced(false)}>
+          <div aria-labelledby="order-confirmed-title" aria-modal="true" className="relative w-full max-w-md bg-[#f7f5f0] px-8 py-12 text-center" onClick={(event) => event.stopPropagation()} role="dialog">
+            <button aria-label={copy.product.close} className="absolute end-4 top-4 text-[#191915]" onClick={() => setOrderPlaced(false)} type="button">
+              <Icon name="close" size={20} />
+            </button>
+            <span className="mx-auto grid size-16 place-items-center rounded-full bg-[#1d241b] text-white"><Icon name="check" size={25} /></span>
+            <h2 className="mt-7 font-serif text-4xl" id="order-confirmed-title">{copy.product.thanks}</h2>
+            <p className="mt-4 text-sm leading-6 text-[#6f6a61]">{copy.product.confirmed}</p>
+          </div>
+        </div>
+      )}
 
       {related.length > 0 && (
         <section className="px-5 py-24 md:px-10 md:py-32">
@@ -475,8 +541,44 @@ function CheckoutSection({ children, title }: { children: ReactNode; title: stri
   return <section><h2 className="mb-5 font-serif text-3xl">{title}</h2>{children}</section>;
 }
 
-function Field({ label, type = "text", value, onChange }: { label: string; type?: string; value?: string; onChange?: (value: string) => void }) {
-  return <label className="block"><span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">{label}</span><input className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none focus:border-[#555148]" onChange={onChange ? (event) => onChange(event.target.value) : undefined} required type={type} value={onChange ? value : undefined} /></label>;
+function Field({ label, minLength, type = "text", value, onChange }: { label: string; minLength?: number; type?: string; value?: string; onChange?: (value: string) => void }) {
+  return <label className="block"><span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">{label}</span><input className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none focus:border-[#555148]" minLength={minLength} onChange={onChange ? (event) => onChange(event.target.value) : undefined} required type={type} value={onChange ? value : undefined} /></label>;
+}
+
+function LegalPage({ page }: { page: "privacy" | "policies" | "terms" }) {
+  const { copy } = useLocale();
+  const doc = copy.legal[page];
+
+  return (
+    <main className="px-5 py-16 md:px-10 md:py-24">
+      <article className="mx-auto max-w-3xl">
+        <h1 className="font-serif text-5xl md:text-7xl">{doc.title}</h1>
+        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#857a62]">{doc.updated}</p>
+        <div className="mt-12 space-y-10">
+          {doc.sections.map((section) => (
+            <section key={section.heading}>
+              <h2 className="font-serif text-3xl">{section.heading}</h2>
+              {section.paragraphs.map((paragraph) => (
+                <p className="mt-4 text-sm leading-7 text-[#5f5b53]" key={paragraph}>{paragraph}</p>
+              ))}
+            </section>
+          ))}
+        </div>
+      </article>
+    </main>
+  );
+}
+
+export function PrivacyPage() {
+  return <LegalPage page="privacy" />;
+}
+
+export function PoliciesPage() {
+  return <LegalPage page="policies" />;
+}
+
+export function TermsPage() {
+  return <LegalPage page="terms" />;
 }
 
 export function NotFoundPage() {
