@@ -211,7 +211,7 @@ export function ProductPage() {
   if (loading) return <main className="px-5 py-24 text-sm text-[#6d6960]">Loading the collection</main>;
   if (error) return <main className="px-5 py-24 text-sm text-[#8a3d32]">{error}</main>;
   if (!product || !products || !selectedVariant) return <Navigate replace to="/not-found" />;
-  const related = products.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
+  // const related = products.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
   const inStock = selectedVariant.quantity > 0;
   const maxQuantity = Math.max(1, selectedVariant.quantity);
 
@@ -348,14 +348,14 @@ export function ProductPage() {
         </div>
       )}
 
-      {related.length > 0 && (
+      {/* {related.length > 0 && (
         <section className="px-5 py-24 md:px-10 md:py-32">
           <div className="mx-auto max-w-[1440px]">
             <h2 className="mb-12 font-serif text-5xl">{copy.product.related}</h2>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">{related.map((item) => <ProductCard key={item.id} product={item} />)}</div>
           </div>
         </section>
-      )}
+      )} */}
     </main>
   );
 }
