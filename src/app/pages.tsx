@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import { request } from "./api";
 import { useCatalog } from "./catalog";
 import { Icon, ProductCard } from "./components";
 import { deliveryFee, type Product } from "./data";
 import { formatPrice, useLocale } from "./i18n";
+import { trackInitiateCheckout, trackLead, trackViewContent } from "./metaPixel";
 import { useShop } from "./store";
 
 export function HomePage() {
@@ -183,6 +184,8 @@ export function ProductPage() {
   const [orderPending, setOrderPending] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const checkoutStarted = useRef(false);
+  const viewedProductId = useRef<string | null>(null);
   const product = products?.find((item) => item.id === productId);
   const selectedVariant =
     product?.variants.find((variant) => variant.id === variantId) ??
@@ -197,7 +200,35 @@ export function ProductPage() {
     setOrderPending(false);
     setOrderError(null);
     setOrderPlaced(false);
+    checkoutStarted.current = false;
   }, [productId]);
+
+  useEffect(() => {
+    if (!product) return;
+    const title = `${product.name} | Cuties.tn`;
+    document.title = title;
+    const previousDescription = setMeta("name", "description", product.description);
+    const previousOgTitle = setMeta("property", "og:title", title);
+    const previousOgDescription = setMeta("property", "og:description", product.description);
+    return () => {
+      document.title = copy.meta.title;
+      restoreMeta("name", "description", previousDescription);
+      restoreMeta("property", "og:title", previousOgTitle);
+      restoreMeta("property", "og:description", previousOgDescription);
+    };
+  }, [product, copy.meta.title]);
+
+  useEffect(() => {
+    if (!product || viewedProductId.current === product.id) return;
+    viewedProductId.current = product.id;
+    trackViewContent({
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "TND",
+    });
+  }, [product]);
 
   useEffect(() => {
     if (!selectedVariant) return;
@@ -215,6 +246,12 @@ export function ProductPage() {
   const inStock = selectedVariant.quantity > 0;
   const maxQuantity = Math.max(1, selectedVariant.quantity);
 
+  const startCheckout = () => {
+    if (checkoutStarted.current) return;
+    checkoutStarted.current = true;
+    trackInitiateCheckout();
+  };
+
   const add = () => {
     if (!inStock) return;
     addToCart(product.id, selectedVariant.id, Math.min(quantity, selectedVariant.quantity));
@@ -225,6 +262,7 @@ export function ProductPage() {
   const buy = async (event: FormEvent) => {
     event.preventDefault();
     if (!inStock) return;
+    const total = product.price * quantity + deliveryFee;
     setOrderPending(true);
     setOrderError(null);
     try {
@@ -237,6 +275,7 @@ export function ProductPage() {
           items: [{ productId: product.id, variantId: selectedVariant.id, quantity }],
         },
       });
+      trackLead({ content_name: product.name, value: total, currency: "TND" });
       setOrder({ name: "", address: "", phone: "" });
       setOrderPending(false);
       setOrderPlaced(true);
@@ -316,9 +355,9 @@ export function ProductPage() {
                 <h2 className="font-serif text-3xl">{copy.product.orderTitle}</h2>
                 <p className="mt-3 text-sm leading-6 text-[#666259]">{copy.product.orderBody}</p>
                 <div className="mt-6 space-y-4">
-                  <Field label={copy.product.name} value={order.name} onChange={(name) => setOrder({ ...order, name })} />
-                  <Field label={copy.product.address} value={order.address} onChange={(address) => setOrder({ ...order, address })} />
-                  <Field label={copy.product.phone} minLength={8} type="tel" value={order.phone} onChange={(phone) => setOrder({ ...order, phone })} />
+                  <Field label={copy.product.name} value={order.name} onChange={(name) => setOrder({ ...order, name })} onFocus={startCheckout} />
+                  <Field label={copy.product.address} value={order.address} onChange={(address) => setOrder({ ...order, address })} onFocus={startCheckout} />
+                  <Field inputMode="numeric" label={copy.product.phone} maxLength={8} minLength={8} type="tel" value={order.phone} onChange={(phone) => setOrder({ ...order, phone: phone.replace(/\D/g, "").slice(0, 8) })} onFocus={startCheckout} />
                 </div>
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="flex justify-between"><span>{copy.cart.subtotal}</span><span>{formatPrice(product.price * quantity, locale)}</span></div>
@@ -541,8 +580,28 @@ function CheckoutSection({ children, title }: { children: ReactNode; title: stri
   return <section><h2 className="mb-5 font-serif text-3xl">{title}</h2>{children}</section>;
 }
 
-function Field({ label, minLength, type = "text", value, onChange }: { label: string; minLength?: number; type?: string; value?: string; onChange?: (value: string) => void }) {
-  return <label className="block"><span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">{label}</span><input className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none focus:border-[#555148]" minLength={minLength} onChange={onChange ? (event) => onChange(event.target.value) : undefined} required type={type} value={onChange ? value : undefined} /></label>;
+function Field({ label, minLength, maxLength, inputMode, type = "text", value, onChange, onFocus }: { label: string; minLength?: number; maxLength?: number; inputMode?: "numeric"; type?: string; value?: string; onChange?: (value: string) => void; onFocus?: () => void }) {
+  return <label className="block"><span className="mb-2 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[#746f66]">{label}</span><input className="w-full border border-[#cbc5b9] bg-transparent px-4 py-3.5 text-sm outline-none focus:border-[#555148]" inputMode={inputMode} maxLength={maxLength} minLength={minLength} onChange={onChange ? (event) => onChange(event.target.value) : undefined} onFocus={onFocus} required type={type} value={onChange ? value : undefined} /></label>;
+}
+
+function setMeta(attribute: "name" | "property", key: string, content: string) {
+  const selector = `meta[${attribute}="${key}"]`;
+  const existing = document.head.querySelector(selector);
+  const previous = existing?.getAttribute("content") ?? null;
+  const element = existing ?? document.createElement("meta");
+  if (!existing) {
+    element.setAttribute(attribute, key);
+    document.head.appendChild(element);
+  }
+  element.setAttribute("content", content);
+  return { created: !existing, previous };
+}
+
+function restoreMeta(attribute: "name" | "property", key: string, previous: { created: boolean; previous: string | null }) {
+  const element = document.head.querySelector(`meta[${attribute}="${key}"]`);
+  if (!element) return;
+  if (previous.created) element.remove();
+  else if (previous.previous !== null) element.setAttribute("content", previous.previous);
 }
 
 function LegalPage({ page }: { page: "privacy" | "policies" | "terms" }) {

@@ -6,6 +6,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
         VITE_SITE_URL: ${VITE_SITE_URL}
+        VITE_META_PIXEL_ID: ${VITE_META_PIXEL_ID}
     restart: unless-stopped
     expose:
       - "80"

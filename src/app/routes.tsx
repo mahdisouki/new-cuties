@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { AdminIndex, AdminLoginPage, AdminOrdersPage, AdminProductPage, AdminProductsPage, AdminRoot, AdminVisitorsPage } from "./admin/pages";
 import { Layout } from "./components";
+import { MetaPixelRoute } from "./metaPixel";
 import {
   CartPage,
   CheckoutPage,
@@ -14,6 +15,9 @@ import {
 } from "./pages";
 
 export const router = createBrowserRouter([
+  {
+    Component: MetaPixelRoute,
+    children: [
   {
     path: "/admin",
     Component: AdminRoot,
@@ -41,6 +45,8 @@ export const router = createBrowserRouter([
       { path: "terms", Component: TermsPage },
       { path: "not-found", Component: NotFoundPage },
       { path: "*", Component: NotFoundPage },
+    ],
+  },
     ],
   },
 ]);
