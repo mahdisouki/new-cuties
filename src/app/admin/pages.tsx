@@ -27,6 +27,20 @@ export function AdminLayout() {
   const location = useLocation();
   const isLogin = location.pathname === "/admin/login";
 
+  useEffect(() => {
+    const previousLang = document.documentElement.lang;
+    const previousDir = document.documentElement.dir;
+    const previousTitle = document.title;
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
+    document.title = "Cuties.tn";
+    return () => {
+      document.documentElement.lang = previousLang;
+      document.documentElement.dir = previousDir;
+      document.title = previousTitle;
+    };
+  }, []);
+
   if (!token && !isLogin) return <Navigate replace to="/admin/login" />;
   if (token && isLogin) return <Navigate replace to="/admin/products" />;
 

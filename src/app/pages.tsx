@@ -174,12 +174,12 @@ export function ShopPage() {
 
 export function ProductPage() {
   const { productId } = useParams();
-  const { addToCart } = useShop();
+  // const { addToCart } = useShop();
   const { copy, locale } = useLocale();
   const { products, loading, error } = useCatalog();
   const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [added, setAdded] = useState(false);
+  // const [added, setAdded] = useState(false);
   const [order, setOrder] = useState({ name: "", address: "", phone: "" });
   const [orderPending, setOrderPending] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
@@ -194,7 +194,7 @@ export function ProductPage() {
 
   useEffect(() => {
     setQuantity(1);
-    setAdded(false);
+    // setAdded(false);
     setVariantId(null);
     setOrder({ name: "", address: "", phone: "" });
     setOrderPending(false);
@@ -252,12 +252,12 @@ export function ProductPage() {
     trackInitiateCheckout();
   };
 
-  const add = () => {
-    if (!inStock) return;
-    addToCart(product.id, selectedVariant.id, Math.min(quantity, selectedVariant.quantity));
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 1800);
-  };
+  // const add = () => {
+  //   if (!inStock) return;
+  //   addToCart(product.id, selectedVariant.id, Math.min(quantity, selectedVariant.quantity));
+  //   setAdded(true);
+  //   window.setTimeout(() => setAdded(false), 1800);
+  // };
 
   const buy = async (event: FormEvent) => {
     event.preventDefault();
@@ -337,9 +337,9 @@ export function ProductPage() {
                     <span className="w-7 text-center text-xs">{quantity}</span>
                     <button aria-label={copy.a11y.increase} className="grid size-12 place-items-center" onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))} type="button"><Icon name="plus" size={15} /></button>
                   </div>
-                  <button className="flex flex-1 items-center justify-center gap-3 bg-[#1d241b] px-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#30392d]" onClick={add} type="button">
+                  {/* <button className="flex flex-1 items-center justify-center gap-3 bg-[#1d241b] px-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#30392d]" onClick={add} type="button">
                     {added ? <><Icon name="check" size={16} /> {copy.product.added}</> : copy.product.add}
-                  </button>
+                  </button> */}
                 </>
               ) : (
                 <p className="flex flex-1 items-center justify-center border border-[#cbc5b9] px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8a3d32]">

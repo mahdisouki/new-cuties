@@ -1094,7 +1094,7 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function readLocale(): Locale {
   const saved = window.localStorage.getItem("cuties-locale");
-  if (saved === null) return "en";
+  if (saved === null) return "ar";
   if (saved === "en" || saved === "fr" || saved === "ar") return saved;
   throw new Error(`Unsupported locale "${saved}"`);
 }
