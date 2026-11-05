@@ -5,7 +5,7 @@ import { useCatalog } from "./catalog";
 import { Icon, ProductCard } from "./components";
 import { deliveryFee, type Product } from "./data";
 import { formatPrice, useLocale } from "./i18n";
-import { trackInitiateCheckout, trackLead, trackViewContent } from "./metaPixel";
+import { trackInitiateCheckout, trackPurchase, trackViewContent } from "./metaPixel";
 import { useShop } from "./store";
 
 export function HomePage() {
@@ -262,11 +262,10 @@ export function ProductPage() {
   const buy = async (event: FormEvent) => {
     event.preventDefault();
     if (!inStock) return;
-    const total = product.price * quantity + deliveryFee;
     setOrderPending(true);
     setOrderError(null);
     try {
-      await request("/api/orders", {
+      const created = await request<{ id?: string; total?: number }>("/api/orders", {
         method: "POST",
         body: {
           name: order.name,
@@ -275,7 +274,16 @@ export function ProductPage() {
           items: [{ productId: product.id, variantId: selectedVariant.id, quantity }],
         },
       });
-      trackLead({ content_name: product.name, value: total, currency: "TND" });
+      if (!created.id) throw new Error("Order response is missing an id");
+      if (typeof created.total !== "number") throw new Error("Order response is missing a total");
+      trackPurchase({
+        value: created.total,
+        currency: "TND",
+        content_ids: [product.id],
+        content_type: "product",
+        num_items: quantity,
+        eventID: created.id,
+      });
       setOrder({ name: "", address: "", phone: "" });
       setOrderPending(false);
       setOrderPlaced(true);
@@ -492,7 +500,7 @@ export function CheckoutPage() {
     setPending(true);
     setError(null);
     try {
-      await request("/api/orders", {
+      const created = await request<{ id?: string; total?: number }>("/api/orders", {
         method: "POST",
         body: {
           ...form,
@@ -502,6 +510,16 @@ export function CheckoutPage() {
             quantity,
           })),
         },
+      });
+      if (!created.id) throw new Error("Order response is missing an id");
+      if (typeof created.total !== "number") throw new Error("Order response is missing a total");
+      trackPurchase({
+        value: created.total,
+        currency: "TND",
+        content_ids: cart.map(({ product }) => product.id),
+        content_type: "product",
+        num_items: cart.reduce((count, item) => count + item.quantity, 0),
+        eventID: created.id,
       });
       clearCart();
       setComplete(true);

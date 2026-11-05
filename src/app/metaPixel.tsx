@@ -69,9 +69,17 @@ export function trackViewContent(params: {
   window.fbq!("track", "ViewContent", params);
 }
 
-export function trackLead(params: { content_name: string; value: number; currency: "TND" }) {
+export function trackPurchase(params: {
+  value: number;
+  currency: "TND";
+  content_ids: string[];
+  content_type: "product";
+  num_items: number;
+  eventID: string;
+}) {
   initMetaPixel();
-  window.fbq!("track", "Lead", params);
+  const { eventID, ...details } = params;
+  window.fbq!("track", "Purchase", details, { eventID });
 }
 
 export function trackInitiateCheckout() {
